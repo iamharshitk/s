@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Our 2nd Date - 27 March 2026</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<link href="https://fonts.googleapis.com/css2?family=Abril+Fatface&family=Nunito:wght@300;400;600;700;800&family=Dancing+Script:wght@600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --cream: #FFF6EC;
+  --blush: #FFCDD8;
+  --coral: #E8604C;
+  --amber: #F4A261;
+  --text: #2A1E1E;
+  --soft: #8A6A6A;
+  --green: #3D6B40;
+  --card: #FFFDF8;
+}
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+html, body {
+  width:100vw; height:100vh; overflow:hidden;
+  font-family:'Nunito',sans-serif;
+  background: var(--cream);
+}
+
+/* ── PROGRESS DOTS ── */
+#progress {
+  position:fixed; top:18px; left:50%; transform:translateX(-50%);
+  display:flex; gap:9px; z-index:200;
+}
+.dot {
+  width:7px; height:7px; border-radius:50%;
+  background:rgba(42,30,30,.18);
+  transition: all .35s ease;
+}
+.dot.active { background:var(--coral); transform:scale(1.45); }
+
+/* ── NEXT BUTTON ── */
+#btn-next {
+  position:fixed; bottom:28px; right:28px; z-index:200;
+  background:var(--coral); color:#fff; border:none;
+  padding:13px 28px; border-radius:50px;
+  font-family:'Nunito',sans-serif; font-size:15px; font-weight:800;
+  cursor:pointer; letter-spacing:.5px;
+  box-shadow:0 6px 24px rgba(232,96,76,.4);
+  transition: all .25s ease;
+}
+#btn-next:hover { transform:translateY(-3px); box-shadow:0 10px 30px rgba(232,96,76,.5); }
+
+/* ── PAGE BASE ── */
+.page {
+  position:absolute; inset:0;
+  display:flex; flex-direction:column;
+  align-items:center; justify-content:center;
+  transition: transform .65s cubic-bezier(.77,0,.175,1), opacity .5s ease;
+  transform:translateX(100%); opacity:0;
+}
+.page.active  { transform:translateX(0);    opacity:1; }
+.page.leaving { transform:translateX(-100%); opacity:0; }
+
+.chapter-badge {
+  font-size:11px; font-weight:700; letter-spacing:3px;
+  text-transform:uppercase; color:var(--coral); margin-bottom:8px;
+}
+
+/* ══════════════ PAGE 0 — COVER ══════════════ */
+#p0 { background:linear-gradient(140deg,#FFF0DC,#FFE0E8); text-align:center; }
+
+.cover-stamp {
+  border:3px solid var(--coral); border-radius:8px;
+  padding:5px 18px; display:inline-block;
+  font-size:11px; font-weight:800; letter-spacing:4px;
+  text-transform:uppercase; color:var(--coral); margin-bottom:22px;
+  transform:rotate(-2deg);
+}
+.cover-title {
+  font-family:'Abril Fatface',serif;
+  font-size:clamp(44px,8vw,88px);
+  color:var(--text); line-height:1.05; margin-bottom:14px;
+}
+.cover-subtitle {
+  font-family:'Dancing Script',cursive;
+  font-size:clamp(20px,3.5vw,34px);
+  color:var(--coral); margin-bottom:26px;
+}
+.date-pill {
+  display:inline-block; background:var(--coral); color:#fff;
+  padding:9px 24px; border-radius:50px; font-size:14px;
+  font-weight:800; letter-spacing:2px; margin-bottom:18px;
+}
+.cover-note {
+  font-size:14px; color:var(--soft); max-width:360px; line-height:1.7;
+}
+.hearts-wrap {
+  position:absolute; inset:0; pointer-events:none; overflow:hidden;
+}
+.heart {
+  position:absolute; bottom:-60px;
+  animation:floatUp linear infinite;
+}
+@keyframes floatUp {
+  0%   { transform:translateY(0) rotate(-8deg); opacity:.7; }
+  60%  { opacity:.4; }
+  100% { transform:translateY(-110vh) rotate(8deg); opacity:0; }
+}
+
+/* ══════════════ PAGE 1 — METRO ══════════════ */
+#p1 {
+  background:radial-gradient(ellipse at 30% 30%, #1e2a5e, #0b0d1f);
+  color:#fff; gap:18px;
+}
+.metro-header { text-align:center; }
+.metro-name {
+  font-family:'Abril Fatface',serif;
+  font-size:clamp(26px,5vw,52px); color:#fff;
+}
+.metro-time {
+  font-family:'Abril Fatface',serif;
+  font-size:clamp(38px,7vw,76px); color:#FFD700; letter-spacing:5px;
+  text-shadow:0 0 30px rgba(255,215,0,.4);
+}
+.metro-sub { font-size:13px; color:rgba(255,255,255,.5); font-style:italic; margin-top:4px; }
+
+/* SVG Metro Scene */
+.metro-svg-wrap { width:min(420px,90vw); }
+.metro-svg-wrap svg { width:100%; height:auto; }
+
+/* Platform elements */
+.platform-body  { fill:#1E307A; }
+.platform-edge  { fill:#152060; }
+.track-rail     { stroke:#666; stroke-width:3; fill:none; }
+.track-tie      { stroke:#555; stroke-width:2; }
+.yellow-line    { stroke:#FFD700; stroke-width:3; stroke-dasharray:8 4; }
+.train-body     { fill:#1565C0; }
+.train-top      { fill:#1976D2; }
+.train-win      { fill:rgba(255,255,255,.75); rx:3; }
+.train-door     { fill:#0D47A1; }
+.headlight-g    { fill:#FFD700; }
+
+@keyframes trainSlide {
+  0%   { transform:translateX(-220px); }
+  60%  { transform:translateX(0px); }
+  100% { transform:translateX(0px); }
+}
+@keyframes trainBob { 0%,100%{transform:translateY(0);}50%{transform:translateY(1.5px);} }
+#train-group { animation:trainSlide 2.8s cubic-bezier(.25,.46,.45,.94) forwards, trainBob 1.8s 2.8s ease-in-out infinite; }
+
+.countdown-box {
+  background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.15);
+  border-radius:14px; padding:12px 28px; text-align:center;
+  backdrop-filter:blur(12px);
+}
+.cd-label { font-size:10px; letter-spacing:3px; text-transform:uppercase; color:rgba(255,255,255,.4); margin-bottom:4px; }
+.cd-time   { font-family:'Abril Fatface',serif; font-size:26px; color:#FFD700; letter-spacing:4px; }
+
+.line-badges { display:flex; gap:10px; }
+.line-badge  {
+  display:flex; align-items:center; gap:7px;
+  background:rgba(255,255,255,.08); border-radius:20px;
+  padding:6px 14px; font-size:13px;
+  border:1px solid rgba(255,255,255,.12);
+}
+.lbdot { width:11px; height:11px; border-radius:50%; flex-shrink:0; }
+.p1-quip { font-size:13px; color:rgba(255,255,255,.4); font-style:italic; }
+
+/* ══════════════ PAGE 2 — JANPATH WALK ══════════════ */
+#p2 {
+  background:linear-gradient(140deg,#EAF5EA,#F5F7EE);
+  flex-direction:row; gap:32px;
+  padding:56px 40px 76px;
+}
+.p2-left { flex:1; max-width:400px; }
+.p2-right {
+  flex:1; max-width:420px; height:min(340px,45vh);
+  border-radius:22px; overflow:hidden;
+  box-shadow:0 10px 40px rgba(0,0,0,.15);
+}
+#map-janpath { width:100%; height:100%; }
+
+.walk-title { font-family:'Abril Fatface',serif; font-size:clamp(26px,4vw,44px); color:#2A3D1C; margin:8px 0 14px; }
+.walk-stats  { display:flex; gap:12px; margin-bottom:18px; }
+.wstat {
+  background:#fff; border-radius:14px; padding:10px 16px;
+  text-align:center; box-shadow:0 3px 12px rgba(0,0,0,.07); flex:1;
+}
+.wstat-n { font-family:'Abril Fatface',serif; font-size:22px; color:#4CAF50; }
+.wstat-l { font-size:10px; color:#aaa; text-transform:uppercase; letter-spacing:1px; }
+
+.flower-card {
+  background:#fff; border-radius:18px; padding:18px 20px 16px;
+  box-shadow:0 4px 18px rgba(0,0,0,.07); position:relative;
+  font-size:14px; color:#555; line-height:1.7;
+}
+.flower-card::before { content:'🌸'; font-size:26px; position:absolute; top:-13px; left:16px; }
+.romantic-line {
+  font-family:'Dancing Script',cursive; font-size:19px;
+  color:var(--coral); margin-top:10px; display:block;
+}
+.tip-text { font-size:12px; color:#aaa; margin-top:12px; font-style:italic; }
+
+/* ══════════════ PAGE 3 — SHOPPING ══════════════ */
+#p3 { background:#FFF5E4; padding:56px 36px 76px; }
+
+.p3-grid {
+  display:grid; grid-template-columns:1fr auto; gap:32px;
+  width:100%; max-width:860px; align-items:start;
+}
+.shop-title { font-family:'Abril Fatface',serif; font-size:clamp(26px,4vw,44px); color:#4A2800; margin:8px 0 10px; }
+.shop-desc  { font-size:14px; color:#777; line-height:1.7; max-width:360px; }
+
+.market-row { display:flex; gap:8px; flex-wrap:wrap; margin:14px 0; }
+.mitem {
+  background:#fff; border-radius:12px; padding:8px 12px;
+  font-size:22px; box-shadow:0 2px 8px rgba(0,0,0,.07);
+  cursor:default; transition:transform .2s;
+}
+.mitem:hover { transform:translateY(-4px) rotate(7deg); }
+
+.bargain-box {
+  background:#fff; border-radius:20px; padding:22px 20px;
+  box-shadow:0 5px 24px rgba(0,0,0,.1); text-align:center; margin-top:4px;
+}
+.barg-label { font-size:10px; letter-spacing:2px; text-transform:uppercase; color:#bbb; margin-bottom:6px; }
+.barg-price {
+  font-family:'Abril Fatface',serif; font-size:52px;
+  color:var(--coral); transition:all .25s ease; line-height:1;
+}
+.barg-price.pop { animation:pricePop .3s ease; }
+@keyframes pricePop { 0%,100%{transform:scale(1);} 50%{transform:scale(1.25);} }
+.barg-react { font-size:13px; color:#999; min-height:20px; margin:8px 0; font-style:italic; }
+.barg-btn {
+  background:#FF7043; color:#fff; border:none;
+  padding:11px 22px; border-radius:50px; width:100%;
+  font-family:'Nunito',sans-serif; font-weight:800; font-size:14px;
+  cursor:pointer; transition:all .2s;
+}
+.barg-btn:hover:not(:disabled) { background:#E64A19; transform:scale(1.04); }
+.barg-btn:disabled { background:#ccc; cursor:default; }
+
+/* Photo placeholder */
+.photo-box {
+  width:200px; aspect-ratio:3/4; border:2px dashed #FFAAB5;
+  border-radius:18px; overflow:hidden; cursor:pointer;
+  display:flex; flex-direction:column; align-items:center;
+  justify-content:center; background:#fff; position:relative;
+  transition:all .3s; flex-shrink:0;
+}
+.photo-box:hover { border-color:var(--coral); background:#FFF0F0; }
+.photo-box img { width:100%;height:100%;object-fit:cover;position:absolute; }
+.ph-inner { text-align:center; color:#ddd; pointer-events:none; }
+.ph-inner .cam { font-size:34px; }
+.ph-inner p { font-size:12px; margin-top:4px; }
+input[type=file].hidden { display:none; }
+.photo-caption { font-size:11px; color:#aaa; text-align:center; margin-top:8px; font-style:italic; }
+
+/* ══════════════ PAGE 4 — CAFE ══════════════ */
+#p4 {
+  background:linear-gradient(140deg,#1A0A00,#311800);
+  color:#fff; flex-direction:row; gap:32px;
+  padding:56px 40px 76px;
+}
+.p4-left { flex:1; max-width:400px; }
+.p4-right {
+  flex:1; max-width:420px; height:min(340px,45vh);
+  border-radius:22px; overflow:hidden;
+  box-shadow:0 10px 50px rgba(0,0,0,.5);
+}
+#map-cafe { width:100%; height:100%; }
+
+.cafe-title { font-family:'Abril Fatface',serif; font-size:clamp(26px,4vw,44px); color:#FFD700; margin:8px 0 12px; }
+.cafe-desc  { font-size:14px; color:rgba(255,255,255,.65); line-height:1.75; }
+
+.cafe-facts {
+  display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:18px 0;
+}
+.cf {
+  background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.1);
+  border-radius:14px; padding:12px 14px;
+}
+.cf-icon  { font-size:18px; }
+.cf-label { font-size:10px; color:rgba(255,255,255,.4); letter-spacing:1px; text-transform:uppercase; margin:3px 0 2px; }
+.cf-val   { font-size:14px; font-weight:700; }
+.cafe-quip {
+  font-family:'Dancing Script',cursive; font-size:19px;
+  color:#FFD700; font-style:italic;
+}
+
+/* ══════════════ PAGE 5 — GOODBYE ══════════════ */
+#p5 {
+  background:radial-gradient(ellipse at 40% 40%,#0F3460,#0b0d1f);
+  color:#fff; text-align:center; gap:16px;
+}
+.stars-wrap { position:absolute; inset:0; pointer-events:none; overflow:hidden; }
+.star { position:absolute; background:#fff; border-radius:50%; animation:twink ease-in-out infinite; }
+@keyframes twink { 0%,100%{opacity:.8;transform:scale(1);} 50%{opacity:.15;transform:scale(.5);} }
+
+.bye-title {
+  font-family:'Abril Fatface',serif;
+  font-size:clamp(34px,6vw,64px); line-height:1.05;
+}
+.bye-sub {
+  font-family:'Dancing Script',cursive;
+  font-size:clamp(18px,3vw,30px); color:#90CAF9;
+}
+.route-strip {
+  display:flex; align-items:center; gap:12px;
+  background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.12);
+  border-radius:50px; padding:11px 22px; font-size:14px;
+}
+.rpill { background:rgba(255,255,255,.13); border-radius:20px; padding:6px 14px; font-weight:700; font-size:13px; }
+.rarrow { font-size:18px; color:#FFD700; animation:arrowPulse 1.4s ease-in-out infinite; }
+@keyframes arrowPulse { 0%,100%{transform:translateX(0);opacity:1;} 50%{transform:translateX(5px);opacity:.4;} }
+
+.bye-card {
+  background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.13);
+  border-radius:20px; padding:22px 28px; max-width:440px;
+  font-size:14px; color:rgba(255,255,255,.75); line-height:1.75;
+  backdrop-filter:blur(14px);
+}
+.bye-romantic {
+  font-family:'Dancing Script',cursive; font-size:21px;
+  color:#FFD700; display:block; margin-top:10px;
+}
+.bye-footer { font-size:12px; color:rgba(255,255,255,.3); font-style:italic; }
+
+/* ── RESPONSIVE ── */
+@media (max-width:680px) {
+  #p2, #p4 { flex-direction:column; padding:64px 20px 76px; overflow-y:auto; gap:18px; }
+  .p2-right, .p4-right { max-width:100%; height:220px; }
+  .p3-grid { grid-template-columns:1fr; }
+  .photo-box { width:100%; aspect-ratio:4/3; }
+}
+</style>
+</head>
+<body>
+
+<!-- Progress -->
+<div id="progress"></div>
+<!-- Nav -->
+<button id="btn-next" onclick="nextPage()">Next →</button>
+
+<!-- ═══════════════ PAGE 0 — COVER ═══════════════ -->
+<div class="page active" id="p0">
+  <div class="hearts-wrap" id="hearts"></div>
+  <div class="cover-stamp">🕵️ Classified - Eyes Only (No SS this time pls)</div>
+  <div class="cover-title">Operation:<br>Win Swats<br>Back.</div>
+  <div class="cover-subtitle">The Situationship Chronicles, Vol. II</div>
+  <div class="date-pill">📅 27 MARCH 2026 · NEW DELHI</div>
+  <p class="cover-note">
+    A meticulously engineered afternoon. Scientifically calibrated to make her CHALANT <strong>🔥🔥🔥</strong> from being currently NON-CHALANT <strong>🙄</strong>.<br><br>
+    Click through. The plan awaits.
+  </p>
+</div>
+
+<!-- ═══════════════ PAGE 1 — METRO ═══════════════ -->
+<div class="page" id="p1">
+  <div class="metro-header">
+    <div class="chapter-badge" style="color:#FFD700">📍 Chapter 1 - The Grand Arrival</div>
+    <div class="metro-name">Rajiv Chowk Metro Station</div>
+    <div class="metro-time">12 : 45 PM</div>
+    <div class="metro-sub">Yellow &amp; Blue Line Interchange · Connaught Place · New Delhi <br> Please be ready to handle the situation if some ladies mistake me for a stalker standing right where women's coach stops</b></div>
+  </div>
+
+  <!-- Isometric Metro SVG -->
+  <div class="metro-svg-wrap">
+    <svg viewBox="0 0 420 200" xmlns="http://www.w3.org/2000/svg" style="overflow:visible">
+      <defs>
+        <linearGradient id="platGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" style="stop-color:#1E2E6E"/>
+          <stop offset="50%" style="stop-color:#2A3F96"/>
+          <stop offset="100%" style="stop-color:#1E2E6E"/>
+        </linearGradient>
+        <linearGradient id="trainGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" style="stop-color:#1E88E5"/>
+          <stop offset="100%" style="stop-color:#0D47A1"/>
+        </linearGradient>
+        <filter id="glow">
+          <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+          <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+      </defs>
+
+      <!-- Platform surface (perspective) -->
+      <polygon points="20,60 400,60 380,160 40,160" fill="url(#platGrad)" rx="4"/>
+      <!-- Platform edge (depth) -->
+      <polygon points="40,160 380,160 380,175 40,175" fill="#10194A"/>
+      <!-- Platform side left -->
+      <polygon points="20,60 40,160 40,175 18,75" fill="#162050"/>
+
+      <!-- Track rails -->
+      <line x1="55" y1="62" x2="45" y2="158" stroke="#555" stroke-width="3"/>
+      <line x1="85" y1="62" x2="75" y2="158" stroke="#555" stroke-width="3"/>
+      <!-- Ties -->
+      <line x1="55" y1="78" x2="85" y2="78" stroke="#444" stroke-width="2"/>
+      <line x1="53" y1="98" x2="83" y2="98" stroke="#444" stroke-width="2"/>
+      <line x1="51" y1="118" x2="81" y2="118" stroke="#444" stroke-width="2"/>
+      <line x1="49" y1="138" x2="79" y2="138" stroke="#444" stroke-width="2"/>
+
+      <!-- Yellow safety line -->
+      <line x1="100" y1="62" x2="90" y2="158" stroke="#FFD700" stroke-width="3" stroke-dasharray="10 6"/>
+
+      <!-- Platform lighting strips -->
+      <line x1="110" y1="63" x2="375" y2="63" stroke="rgba(255,255,255,0.15)" stroke-width="1.5"/>
+
+      <!-- Platform sign -->
+      <rect x="100" y="68" width="90" height="22" rx="4" fill="#0D1A4A"/>
+      <text x="145" y="83" font-size="9" fill="#FFD700" text-anchor="middle" font-family="Nunito, sans-serif" font-weight="700">RAJIV CHOWK</text>
+
+      <!-- People on platform -->
+      <text x="130" y="145" font-size="22">🧍‍♀️</text>
+      <text x="165" y="148" font-size="18">🧍</text>
+      <text x="200" y="140" font-size="20">👫</text>
+      <text x="245" y="147" font-size="20">🧍‍♀️</text>
+
+      <!-- TRAIN GROUP (animated) -->
+      <g id="train-group" style="clip-path:inset(-10px -10px -10px 98px)">
+        <!-- Train body -->
+        <rect x="108" y="68" width="210" height="82" rx="6" fill="url(#trainGrad)" filter="url(#glow)"/>
+        <!-- Train top stripe -->
+        <rect x="108" y="68" width="210" height="12" rx="6" fill="#42A5F5"/>
+        <!-- Windows row 1 -->
+        <rect x="118" y="84" width="28" height="18" rx="3" fill="rgba(255,255,255,0.8)"/>
+        <rect x="154" y="84" width="28" height="18" rx="3" fill="rgba(255,255,255,0.8)"/>
+        <rect x="190" y="84" width="28" height="18" rx="3" fill="rgba(255,255,255,0.8)"/>
+        <rect x="226" y="84" width="28" height="18" rx="3" fill="rgba(255,255,255,0.8)"/>
+        <rect x="262" y="84" width="28" height="18" rx="3" fill="rgba(255,255,255,0.8)"/>
+        <!-- Doors -->
+        <rect x="148" y="105" width="18" height="42" rx="3" fill="#0D47A1"/>
+        <rect x="218" y="105" width="18" height="42" rx="3" fill="#0D47A1"/>
+        <rect x="288" y="105" width="18" height="42" rx="3" fill="#0D47A1"/>
+        <!-- Train nose (right) -->
+        <ellipse cx="318" cy="109" rx="10" ry="39" fill="#0A3A80"/>
+        <!-- Headlight -->
+        <circle cx="319" cy="109" r="5" fill="#FFD700" filter="url(#glow)"/>
+        <!-- Metro line stripe -->
+        <rect x="108" y="143" width="210" height="7" rx="2" fill="#1565C0" opacity=".6"/>
+        <!-- Undercarriage -->
+        <rect x="112" y="146" width="206" height="6" rx="2" fill="#082560"/>
+        <!-- Wheels -->
+        <ellipse cx="140" cy="154" rx="10" ry="5" fill="#333"/>
+        <ellipse cx="175" cy="154" rx="10" ry="5" fill="#333"/>
+        <ellipse cx="255" cy="154" rx="10" ry="5" fill="#333"/>
+        <ellipse cx="295" cy="154" rx="10" ry="5" fill="#333"/>
+      </g>
+
+      <!-- Floor reflection glow -->
+      <ellipse cx="210" cy="162" rx="100" ry="6" fill="rgba(79,195,247,0.12)"/>
+    </svg>
+  </div>
+
+  <div class="countdown-box">
+    <div class="cd-label">⏱ She arrives in</div>
+    <div class="cd-time" id="countdown">calculating...</div>
+  </div>
+
+  <div class="line-badges">
+    <div class="line-badge"><div class="lbdot" style="background:#FFD700"></div> Yellow Line</div>
+    <div class="line-badge"><div class="lbdot" style="background:#1565C0"></div> Blue Line</div>
+  </div>
+
+  <p class="p1-quip">"Look confident. You've done this before." 😛😛😛😛</p>
+</div>
+
+<!-- ═══════════════ PAGE 2 — JANPATH WALK ═══════════════ -->
+<div class="page" id="p2">
+  <div class="p2-left">
+    <div class="chapter-badge">🌸 Chapter 2 - The Walk &amp; The Flowers</div>
+    <div class="walk-title">Strolling Down<br>Janpath</div>
+
+    <div class="walk-stats">
+      <div class="wstat"><div class="wstat-n">700m</div><div class="wstat-l">Walk</div></div>
+      <div class="wstat"><div class="wstat-n">~9 min</div><div class="wstat-l">On foot</div></div>
+      <div class="wstat"><div class="wstat-n">∞</div><div class="wstat-l">Awkward silences</div></div>
+    </div>
+
+    <div class="flower-card">
+      Exit <strong>Gate 7</strong> at Rajiv Chowk and head south on Janpath - the map (your respectable date) has got you. The flower vendors will be right there on the street. Buy her something beautiful.<br><br>
+      Not talking about flowers plucked randomly from somewhere. <em>Actual flowers (possibly Lillies, but actually I was thinking of getting you sunflowers this time).</em> 🌺
+      <span class="romantic-line">"A flower given freely speaks louder than words — especially yours."</span>
+    </div>
+
+    <p class="tip-text">🌡️ Delhi in March: warm &amp; breezy. Carry water. Smile. Breathe.</p>
+  </div>
+
+  <div class="p2-right">
+    <div id="map-janpath"></div>
+  </div>
+</div>
+
+<!-- ═══════════════ PAGE 3 — SHOPPING ═══════════════ -->
+<div class="page" id="p3">
+  <div class="p3-grid">
+    <div>
+      <div class="chapter-badge">🛍️ Chapter 3 - The Great Bargain of Janpath</div>
+      <div class="shop-title">Retail Therapy<br>(For Her)</div>
+      <p class="shop-desc">
+        Janpath market: where ₹500 becomes ₹150 if you have the nerve and the right disappointed face AND the right amount of 'Non-Chalance'. You're buying for her. Act like you would pay anything - but don't (hehe - the itinerary is for the both of us).
+      </p>
+
+      <div class="market-row">
+        <div class="mitem">👜</div><div class="mitem">📿</div>
+        <div class="mitem">🧣</div><div class="mitem">🪬</div>
+        <div class="mitem">🌂</div><div class="mitem">🎁</div>
+        <div class="mitem">🪆</div><div class="mitem">🌸</div>
+      </div>
+
+      <div class="bargain-box">
+        <div class="barg-label">🤜 Live Bargain Simulator™</div>
+        <div class="barg-price" id="bprice">₹500</div>
+        <div class="barg-react" id="breact">Shopkeeper: "Sir, fixed price only."</div>
+        <button class="barg-btn" id="bbtn" onclick="doBargain()">Negotiate! 🗣️</button>
+      </div>
+    </div>
+
+    <!-- Photo placeholder -->
+    <div>
+      <div class="photo-box" id="photobox1">
+        <img src="ss.png" alt="swats">
+      </div>
+      <p class="photo-caption">The reason for all of this... <br>(this is one of the pictures you sent me <br> after our first date; one of my favourites) <br><br> (Actually it's just so that I can crosscheck <br> if I am meeting the right girl at metro station 😛)</p>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ PAGE 4 — CAFE ═══════════════ -->
+<div class="page" id="p4">
+  <div class="p4-left">
+    <div class="chapter-badge" style="color:#FFD700">☕ Chapter 4 - Cafe Delhi Heights</div>
+    <div class="cafe-title">Cafe Delhi<br>Heights</div>
+    <p class="cafe-desc">
+      68/1, First Floor, Janpath - the place where we have the <em>pasta</em> we have been waiting for. <em></em> They've served 3 crore smiling customers. One more is well within their capabilities.
+    </p>
+
+    <p class="cafe-quip">"I hope this time they don't give us the looks they gave us the last time for sitting at the cafe for too long." </p>
+  </div>
+
+  <div class="p4-right">
+    <div id="map-cafe"></div>
+  </div>
+</div>
+
+<!-- ═══════════════ PAGE 5 — GOODBYE ═══════════════ -->
+<div class="page" id="p5">
+  <div class="stars-wrap" id="stars"></div>
+
+  <div class="chapter-badge" style="color:#90CAF9">🚇 Chapter 5 - The Farewell (for now)</div>
+  <div class="bye-title">See You<br>Soon, Maybe.</div>
+  <div class="bye-sub">Back to the metro. Eastbound. Home.</div>
+
+  <div class="route-strip">
+    <div class="rpill">🟡 Rajiv Chowk</div>
+    <div class="rarrow">→→→</div>
+    <div class="rpill">🔵 Anand Vihar</div>
+  </div>
+
+  <div class="bye-card">
+    The day closes where it started - Rajiv Chowk metro. Blue Line this time, eastbound toward Anand Vihar.<br><br>
+    Or not, maybe. If you decide that you don't want to listen to music on your way back home and not sit in the women's coach again.
+    <span class="bye-romantic">"No 'harkatein' inside the metro are warranted."</span>
+  </div>
+
+</div>
+
+<!-- ═══════════════ SCRIPTS ═══════════════ -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+// ── NAVIGATION ──
+const PAGE_COUNT = 6;
+let cur = 0;
+const pages = document.querySelectorAll('.page');
+const btn = document.getElementById('btn-next');
+const prog = document.getElementById('progress');
+const mapsReady = {};
+
+// Build dots
+for (let i = 0; i < PAGE_COUNT; i++) {
+  const d = document.createElement('div');
+  d.className = 'dot' + (i === 0 ? ' active' : '');
+  prog.appendChild(d);
+}
+
+function updateDots() {
+  prog.querySelectorAll('.dot').forEach((d, i) => d.classList.toggle('active', i === cur));
+}
+
+function nextPage() {
+  if (cur >= PAGE_COUNT - 1) { cur = 0; restart(); return; }
+  pages[cur].classList.remove('active');
+  pages[cur].classList.add('leaving');
+  cur++;
+  pages[cur].classList.remove('leaving');
+  pages[cur].classList.add('active');
+  updateDots();
+
+  if (cur === 2 && !mapsReady.janpath) { setTimeout(initJanpathMap, 120); mapsReady.janpath = true; }
+  if (cur === 4 && !mapsReady.cafe)    { setTimeout(initCafeMap,    120); mapsReady.cafe    = true; }
+
+  btn.textContent = cur === PAGE_COUNT - 1 ? '↺ Replay' : 'Next →';
+
+  setTimeout(() => pages.forEach(p => { if(!p.classList.contains('active')) p.classList.remove('leaving'); }), 700);
+}
+
+function restart() {
+  pages.forEach(p => { p.classList.remove('active','leaving'); });
+  pages[0].classList.add('active');
+  updateDots();
+  btn.textContent = 'Next →';
+}
+
+// ── COUNTDOWN ──
+function tick() {
+  const target = new Date('2026-03-27T12:40:00+05:30');
+  const diff   = target - new Date();
+  const el     = document.getElementById('countdown');
+  if (diff <= 0) { el.textContent = "She's here! GO! 🏃‍♂️"; return; }
+  const h = Math.floor(diff / 3_600_000);
+  const m = Math.floor((diff % 3_600_000) / 60_000);
+  const s = Math.floor((diff % 60_000) / 1_000);
+  el.textContent = `${h}h ${String(m).padStart(2,'0')}m ${String(s).padStart(2,'0')}s`;
+}
+tick(); setInterval(tick, 1000);
+
+// ── FLOATING HEARTS (page 0) ──
+const heartW = document.getElementById('hearts');
+const hEmoji = ['💕','💖','🌸','✨','💗','🌺','💝'];
+function spawnHeart() {
+  const h = document.createElement('div');
+  h.className = 'heart';
+  h.textContent = hEmoji[Math.floor(Math.random() * hEmoji.length)];
+  h.style.cssText = `left:${Math.random()*95}%;font-size:${14+Math.random()*18}px;animation-duration:${5+Math.random()*5}s;animation-delay:${Math.random()*1.5}s`;
+  heartW.appendChild(h);
+  setTimeout(() => h.remove(), 10_000);
+}
+setInterval(spawnHeart, 900);
+
+// ── STARS (page 5) ──
+const starW = document.getElementById('stars');
+for (let i = 0; i < 65; i++) {
+  const s = document.createElement('div');
+  s.className = 'star';
+  const sz = Math.random() * 2.5 + .5;
+  s.style.cssText = `width:${sz}px;height:${sz}px;left:${Math.random()*100}%;top:${Math.random()*100}%;animation-duration:${2+Math.random()*3}s;animation-delay:${Math.random()*4}s`;
+  starW.appendChild(s);
+}
+
+// ── BARGAIN GAME ──
+const bPrices    = [500, 400, 300, 250, 200, 175, 150];
+const bReactions = [
+  'Shopkeeper: "Sir, fixed price only."',
+  'Shopkeeper: "Arey bhaiya, cost price pe de raha hoon!" 😩',
+  'Shopkeeper: "Okay okay, LAST price. Final. I swear."',
+  'Shopkeeper: "Mam ko dikho pehle... usko pasand hai kya?"',
+  'Shopkeeper: "Theek hai ek kaam karo..." 😤',
+  'Shopkeeper: "You are killing me, bhai. Literally." 💀',
+  '🎉 DEAL at ₹150! You absolute legend of the streets!'
+];
+let bStep = 0;
+
+function doBargain() {
+  if (bStep >= bPrices.length - 1) return;
+  bStep++;
+  const pel = document.getElementById('bprice');
+  pel.textContent = '₹' + bPrices[bStep];
+  pel.classList.remove('pop'); void pel.offsetWidth; pel.classList.add('pop');
+  document.getElementById('breact').textContent = bReactions[bStep];
+  if (bStep === bPrices.length - 1) {
+    const bb = document.getElementById('bbtn');
+    bb.disabled = true; bb.textContent = '🏆 Bargain Legend!';
+    pel.style.color = '#4CAF50';
+  }
+}
+
+// ── PHOTO UPLOAD ──
+function loadPhoto(input, boxId, textId) {
+  if (!input.files || !input.files[0]) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const box = document.getElementById(boxId);
+    let img = box.querySelector('img');
+    if (!img) { img = document.createElement('img'); box.appendChild(img); }
+    img.src = e.target.result;
+    const t = document.getElementById(textId);
+    if (t) t.style.display = 'none';
+  };
+  reader.readAsDataURL(input.files[0]);
+}
+
+// ── LEAFLET MAP — JANPATH WALK ──
+function initJanpathMap() {
+  const map = L.map('map-janpath', { center:[28.6303,77.2196], zoom:15, zoomControl:false, scrollWheelZoom:false });
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution:'© OSM' }).addTo(map);
+
+  const mkStyle = (emoji, bg) => L.divIcon({
+    html:`<div style="background:${bg};border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-size:16px;box-shadow:0 2px 10px rgba(0,0,0,.4)">${emoji}</div>`,
+    iconSize:[32,32], iconAnchor:[16,16], className:''
+  });
+
+  L.marker([28.6328,77.2197], {icon: mkStyle('🚇','#FFD700')}).addTo(map)
+    .bindPopup('<b>Rajiv Chowk Metro</b><br>Exit Gate 7 · 12:40 PM');
+
+  L.marker([28.6275,77.2196], {icon: mkStyle('🌸','#FF69B4')}).addTo(map)
+    .bindPopup('<b>Janpath Market</b><br>Flowers &amp; Flowers 🌺');
+
+  L.polyline([
+    [28.6328,77.2197],[28.6315,77.2197],[28.6300,77.2196],
+    [28.6285,77.2196],[28.6275,77.2196]
+  ], { color:'#FF69B4', weight:4, opacity:.8, dashArray:'10 6' }).addTo(map);
+}
+
+// ── LEAFLET MAP — CAFE ──
+function initCafeMap() {
+  const map = L.map('map-cafe', { center:[28.6271,77.2196], zoom:17, zoomControl:false, scrollWheelZoom:false });
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution:'© OSM' }).addTo(map);
+
+  const cafeIcon = L.divIcon({
+    html:`<div style="background:#FF7043;border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 2px 12px rgba(0,0,0,.45)">☕</div>`,
+    iconSize:[36,36], iconAnchor:[18,18], className:''
+  });
+
+  L.marker([28.6271,77.2196], {icon: cafeIcon}).addTo(map)
+    .bindPopup('<b>Cafe Delhi Heights</b><br>68/1, 1st Floor, Janpath<br>📞 9711034033').openPopup();
+
+  L.circle([28.6271,77.2196], { radius:40, color:'#FF7043', fillColor:'#FF7043', fillOpacity:.15 }).addTo(map);
+}
+</script>
+</body>
+</html>
