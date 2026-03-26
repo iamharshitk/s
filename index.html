@@ -609,6 +609,10 @@ function nextPage() {
   pages[cur].classList.remove('active');
   pages[cur].classList.add('leaving');
   cur++;
+  gtag('event', 'next_page_click', {
+    page_index: cur,
+    page_name: 'p' + cur
+  });
   pages[cur].classList.remove('leaving');
   pages[cur].classList.add('active');
   updateDots();
